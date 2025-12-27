@@ -1,0 +1,49 @@
+---
+- name: Initialisation LXD, Réseau SDN et Stockage
+  shell: |
+    lxd init --auto
+    lxc network create microbr0 ipv4.address=10.0.10.1/24 ipv4.nat=true ipv6.address=none || true
+    lxc storage create disks zfs size=100GiB || true
+    lxc storage set disks volume.size 10GiB
+  ignore_errors: yes
+
+- name: Creation des volumes (Locaux et Distants)
+  shell: |
+    lxc storage volume create disks local{{ item }} --type block || true
+  loop: "{{ range(1, 5) | list }}"
+
+- name: Creation des volumes distants
+  shell: |
+    lxc storage volume create disks remote{{ item }} --type block size=20GiB || true
+  loop: "{{ range(1, 4) | list }}"
+
+- name: Initialisation des Noeuds (Sans IP sur eth0)
+  shell: |
+    lxc init ubuntu:24.04 {{ item }} \
+      --config limits.cpu=2 --config limits.memory=2GiB \
+      --config security.nesting=true \
+      --config security.privileged=true \
+      --config linux.kernel_modules=rbd,overlay,openvswitch
+  loop: "{{ groups['nodes'] }}"
+  ignore_errors: yes
+
+- name: Attachement des disques et du réseau SDN (microbr0)
+  ansible.builtin.shell:
+    cmd: |
+      # Attachement des volumes
+      lxc storage volume attach disks "local{{ loop_idx + 1 }}" "{{ item }}" || true
+      lxc storage volume attach disks "remote{{ loop_idx + 1 }}" "{{ item }}" || true
+
+      lxc config device add "{{ item }}" eth1 nic network=microbr0 name=eth1 || true
+  loop: "{{ groups['nodes'] }}"
+  loop_control:
+    index_var: loop_idx
+  ignore_errors: yes
+
+- name: Démarrage et Préparation Python
+  shell: |
+    lxc start {{ item }}
+    sleep 5
+    lxc exec {{ item }} -- apt update
+    lxc exec {{ item }} -- apt install -y python3
+  loop: "{{ groups['nodes'] }}"
