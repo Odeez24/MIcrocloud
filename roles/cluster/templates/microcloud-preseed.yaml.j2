@@ -1,0 +1,14 @@
+members:
+{% for host in groups['nodes'] %}
+  - address: {{ hostvars[host]['ansible_host'] }}
+{% endfor %}
+storage:
+  ceph:
+    osds:
+{% for host in groups['nodes'] %}
+      - member: {{ host }}
+        devices: ["{{ ceph_disk }}"]
+{% endfor %}
+network:
+  ovn:
+    uplink_interface: {{ overlay_interface }}

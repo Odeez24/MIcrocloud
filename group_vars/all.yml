@@ -1,0 +1,17 @@
+# Config Cluster
+ceph_disk: "/dev/sdb"
+overlay_interface: "eth1"
+
+# Définition des VMs (Configuration spécifique par machine)
+vms_to_deploy:
+  - name: "vm-prod-web"
+    user: "adminway"
+    pass: "P@ssword123"
+    root_disk: "40GiB"
+    additional_disks:
+      - { name: "data", size: "100GiB" }
+  - name: "vm-db-01"
+    user: "db-admin"
+    pass: "DbSecure99!"
+    root_disk: "20GiB"
+    additional_disks: []

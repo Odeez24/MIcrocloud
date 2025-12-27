@@ -1,0 +1,13 @@
+- name: Installation des snaps LXD, MicroCeph, MicroOVN, MicroCloud
+  snap:
+    name:
+      - lxd
+      - microceph
+      - microovn
+      - microcloud
+    channel: latest/stable
+    state: present
+
+- name: Nettoyage du disque Ceph
+  shell: "wipefs -a {{ ceph_disk }} && sgdisk --zap-all {{ ceph_disk }}"
+  ignore_errors: yes
