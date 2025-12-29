@@ -1,0 +1,36 @@
+---
+- name: Configuration Netplan eth1 (IP indispensable pour le preseed)
+  copy:
+    dest: /etc/netplan/99-microcloud.yaml
+    mode: '0600'
+    content: |
+      network:
+        version: 2
+        ethernets:
+          eth1:
+            addresses:
+              - {{ micro_ip }}/24
+            accept-ra: false
+            dhcp4: false
+            link-local: []
+  notify: Apply Netplan
+
+- name: Force l'application du réseau avant la suite
+  meta: flush_handlers
+
+- name: Installation des Snaps (Cohort + Channels)
+  shell: |
+    snap install lxd --channel=5.21/stable --cohort="+"
+    snap install microceph --channel=squid/stable --cohort="+"
+    snap install microovn --channel=24.03/stable --cohort="+"
+    snap install microcloud --channel=2/stable --cohort="+"
+  register: snap_install
+  changed_when: "'installed' in snap_install.stdout"
+
+- name: Déposer le fichier preseed (Format officiel minimal)
+  template:
+    src: microcloud.yaml.j2
+    dest: ./files/preseed.yaml
+
+- name: Exécuter l'initialisation MicroCloud (Preseed sur tous les nœuds)
+  shell: "cat ./files/preseed.yaml | microcloud preseed"

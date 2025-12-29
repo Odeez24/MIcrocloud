@@ -4,3 +4,13 @@
   become: yes
   roles:
     - deploy_infra
+
+- name: Installation et configuration MicroCloud
+  hosts: nodes
+  roles:
+    - microcloud
+
+- name: Déploiement Cloud
+  hosts: node1
+  roles:
+    - vms

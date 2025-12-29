@@ -1,0 +1,31 @@
+---
+- name: Déploiement des VMs de test avec configurations spécifiques
+  shell: |
+    # 1. Lancement de la VM sur le réseau OVN et stockage Ceph
+    lxc launch ubuntu:22.04 {{ item.name }} --vm --network ovn-network --storage remote || true
+    
+    # 2. Configuration spécifique de la taille du disque
+    lxc config device override {{ item.name }} root size={{ item.disk_size }}
+    
+    # 3. Ajout de disques supplémentaires si spécifié
+    {% if item.extra_disks is defined %}
+    {% for disk in range(item.extra_disks) %}
+    lxc storage volume create remote {{ item.name }}-extra-{{ disk }} size=10GiB || true
+    lxc config device add {{ item.name }} extra-disk-{{ disk }} disk pool=remote source={{ item.name }}-extra-{{ disk }}
+    {% endfor %}
+    {% endif %}
+
+    # 4. Configuration Utilisateur et Mot de passe (Cloud-init)
+    lxc config set {{ item.name }} cloud-init.user-data "#cloud-config
+    users:
+      - name: {{ item.username }}
+        passwd: {{ item.password | password_hash('sha512') }}
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        shell: /bin/bash"
+    
+    # 5. HA : Migration automatique en cas de panne de nœud
+    lxc config set {{ item.name }} cluster.evacuate migrate
+  loop:
+    - { name: "vm-web", username: "admin", password: "Password123", disk_size: "20GiB", extra_disks: 2 }
+    - { name: "vm-db", username: "dbuser", password: "DBPassword456", disk_size: "50GiB", extra_disks: 0 }
+  run_once: yes

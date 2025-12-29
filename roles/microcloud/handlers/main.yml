@@ -1,0 +1,9 @@
+---
+- name: Apply Netplan
+  shell: |
+    netplan generate
+    systemctl restart systemd-networkd
+  failed_when: false
+
+- name: Restart snap services
+  command: snap restart lxd
