@@ -2,27 +2,15 @@ lookup_subnet: 10.0.10.0/24
 initiator: node1
 session_passphrase: foo
 systems:
-- name: node1
+{% for host in groups['nodes'] %}
+- name: {{ host }}
   ovn_uplink_interface: eth1
   storage:
     local:
       path: /dev/sdb
     ceph:
       - path: /dev/sdc
-- name: node2
-  ovn_uplink_interface: eth1
-  storage:
-    local:
-      path: /dev/sdb
-    ceph:
-      - path: /dev/sdc
-- name: node3
-  ovn_uplink_interface: eth1
-  storage:
-    local:
-      path: /dev/sdb
-    ceph:
-      - path: /dev/sdc
+{% endfor %}
 ovn:
   ipv4_gateway: 192.0.2.1/24
   ipv4_range: 192.0.2.100-192.0.2.254
