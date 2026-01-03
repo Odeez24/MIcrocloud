@@ -17,17 +17,18 @@ OVN_IPV4_RANGE="10.0.10.100-10.0.10.254"
 OVN_IPV6_GW="fd42:6a3c:bac1:a22e::1/64"
 OVN_DNS_IPV4="10.0.10.1"
 OVN_DNS_IPV6="fd42:6a3c:bac1:a22e::1"
+
 # ==============================================================================
 # 1. PRÉPARATION HÔTE & VMS
 # ==============================================================================
 echo "--- 1. Préparation de l'hôte ---"
-# sudo modprobe kvm_amd 2> /dev/null || sudo modprobe kvm_intel 2> /dev/null
-# sudo snap refresh lxd --channel=$LXD_CHANNEL 2> /dev/null || sudo snap install lxd --channel=$LXD_CHANNEL
-# lxd init --auto
-# lxc network set lxdbr0 ipv4.address 10.1.123.1/24
-# lxc network set lxdbr0 ipv6.address fd42:1:1234:1234::1/64
-# lxc network set lxdbr0 ipv6.dhcp.stateful true
-# sudo systemctl restart snap.lxd.daemon
+sudo modprobe kvm_amd 2> /dev/null || sudo modprobe kvm_intel 2> /dev/null
+sudo snap refresh lxd --channel=$LXD_CHANNEL 2> /dev/null || sudo snap install lxd --channel=$LXD_CHANNEL
+lxd init --auto
+lxc network set lxdbr0 ipv4.address 10.1.123.1/24
+lxc network set lxdbr0 ipv6.address fd42:1:1234:1234::1/64
+lxc network set lxdbr0 ipv6.dhcp.stateful true
+sudo systemctl restart snap.lxd.daemon
 
 lxc storage create $HOST_STORAGE_POOL zfs size=50GiB || true
 lxc network create microbr0 ipv4.address=$OVN_IPV4_GW ipv6.address=$OVN_IPV6_GW || true
@@ -89,7 +90,6 @@ done
 # ==============================================================================
 echo "--- 3. Génération et application du preseed MicroCloud ---"
 
-# Création du fichier YAML sur l'hôte
 cat << EOF > microcloud-preseed.yaml
 initiator_address: 10.1.123.10
 session_passphrase: $PASSPHRASE
@@ -121,14 +121,20 @@ ovn:
   dns_servers: $OVN_DNS_IPV4,$OVN_DNS_IPV6
 EOF
 
-# Injection et exécution du preseed sur chaque nœud
 for i in $(seq 1 $NODE_COUNT); do
-    NAME="micro$i"
-    echo "Application du preseed sur $NAME..."
-    lxc file push microcloud-preseed.yaml "$NAME/root/preseed.yaml"
-    lxc exec "$NAME" -- bash -c "cat /root/preseed.yaml | microcloud preseed" &
+    lxc file push microcloud-preseed.yaml "micro$i/root/preseed.yaml"
 done
+
+echo "Lancement de l'initiateur (micro1)..."
+lxc exec micro1 -- bash -c "cat /root/preseed.yaml | microcloud preseed" &
+
+echo "Attente de l'ouverture de session sur micro1 (15s)..."
+sleep 15
+
+echo "Lancement des joiners (micro2, micro3)..."
+lxc exec micro2 -- bash -c "cat /root/preseed.yaml | microcloud preseed" &
+lxc exec micro3 -- bash -c "cat /root/preseed.yaml | microcloud preseed" &
 
 wait
 
-echo "Finis"
+echo "Cluster MicroCloud initialisé !"

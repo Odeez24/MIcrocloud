@@ -19,6 +19,6 @@ echo "--- Suppression du pool et du réseau ---"
 lxc storage delete $HOST_STORAGE_POOL || true
 lxc network delete microbr0 || true
 
-# sudo snap remove lxd --purge
+sudo snap remove lxd --purge
 
 echo "Nettoyage terminé."
