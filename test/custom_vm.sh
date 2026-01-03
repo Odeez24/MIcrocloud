@@ -5,7 +5,7 @@
 # FORMAT: "NOM | CPU | MEM | USER | PASSWORD | EXTRA_DISK_SIZE"
 # ==============================================================================
 VM_LIST=(
-    "web-server   | 1 | 1GiB | adminweb | P@ssword123"
+    "web-server   | 1 | 1GiB | adminweb | Password123"
     "db-server    | 1 | 1GiB | dbauser  | SQLMaster!"
     "test-machine | 1 | 1GiB | tester   | testpass"
 )
@@ -55,3 +55,24 @@ EOF
 for vm_data in "${VM_LIST[@]}"; do
     create_vm "$vm_data"
 done
+
+    cat << EOF > cloud-config.yaml
+#cloud-config
+users:
+  - name: test
+    groups: sudo
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    lock_passwd: false
+    passwd: $(openssl passwd -6 testpass)
+ssh_pwauth: true
+EOF
+
+    # 2. Création et configuration (On utilise launch directement pour simplifier)
+    lxc launch ubuntu:24.04 test --vm \
+        --network default \
+        --storage remote \
+        --config limits.cpu=1 \
+        --config limits.memory=1GiB \
+        --config user.user-data="$(cat cloud-config.yaml)" \
+        --device root,size=5GiB

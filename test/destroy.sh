@@ -2,7 +2,7 @@
 # Supprime toute l'infrastructure créée par le script de déploiement
 
 NODE_COUNT=3
-HOST_STORAGE_POOL="default"
+HOST_STORAGE_POOL="disks"
 
 echo "--- Suppression des instances ---"
 for i in $(seq 1 $NODE_COUNT); do
@@ -19,6 +19,6 @@ echo "--- Suppression du pool et du réseau ---"
 lxc storage delete $HOST_STORAGE_POOL || true
 lxc network delete microbr0 || true
 
-sudo snap remove lxd --purge
+# sudo snap remove lxd --purge
 
 echo "Nettoyage terminé."
