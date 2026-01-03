@@ -5,7 +5,7 @@ set -e
 # ==============================================================================
 NODE_COUNT=3
 VM_CPU=2
-VM_MEM="4GiB"
+VM_MEM="2GiB"
 LXD_CHANNEL="5.21/stable"
 PASSPHRASE="mon-secret-tres-sur-123"
 
@@ -23,12 +23,15 @@ sudo modprobe kvm_amd 2> /dev/null || sudo modprobe kvm_intel 2> /dev/null
 sudo snap refresh lxd --channel=$LXD_CHANNEL 2> /dev/null || sudo snap install lxd --channel=$LXD_CHANNEL
 lxd init --auto
 lxc network set lxdbr0 ipv4.address 10.1.123.1/24
+lxc network set lxdbr0 ipv6.address fd42:1:1234:1234::1/64
 lxc network set lxdbr0 ipv6.dhcp.stateful true
 sudo systemctl restart snap.lxd.daemon
 
 lxc storage create $HOST_STORAGE_POOL zfs size=50GiB || true
-lxc network create microbr0 ipv4.address=10.0.10.1/24 ipv6.address=none  || true
-sudo ip link set microbr0 promisc on
+lxc network create microbr0 ipv4.address=10.0.10.1/24 ipv6.address=fd42:6a3c:bac1:a22e::1/64 || true
+lxc network set microbr0 ipv4.firewall false  # CORRECTIF : Désactive le pare-feu LXD sur le bridge
+lxc network set microbr0 ipv6.firewall false
+sudo ip link set microbr0 promisc on  
 
 for i in $(seq 1 $NODE_COUNT); do
     NAME="micro$i"
@@ -57,8 +60,9 @@ sleep 15
 for i in $(seq 1 $NODE_COUNT); do
     NAME="micro$i"
     echo "--- Config interne $NAME ---"
-    lxc exec "$NAME" -- apt update && lxc exec "$NAME" -- apt install ethtool -y
-    lxc exec "$NAME" -- ethtool -K enp6s0 tx off
+    lxc exec "$NAME" -- apt update >> "\dev\null"
+    lxc exec "$NAME" -- apt install ethtool -y >> "\dev\null"
+    lxc exec "$NAME" -- ethtool -K enp6s0 tx off rx off 
     lxc exec "$NAME" -- bash -c "cat << EOF > /etc/netplan/99-microcloud.yaml
 network:
     version: 2
@@ -76,5 +80,6 @@ EOF"
     lxc exec "$NAME" -- snap install microcloud --channel=2/stable --cohort="+"
 done
 
+echo "L'infrastructure est prête. Vous pouvez lancer 'lxc exec micro1 microcloud init'"
 
 exit 0

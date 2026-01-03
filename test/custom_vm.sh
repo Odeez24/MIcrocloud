@@ -5,9 +5,9 @@
 # FORMAT: "NOM | CPU | MEM | USER | PASSWORD | EXTRA_DISK_SIZE"
 # ==============================================================================
 VM_LIST=(
-    "web-server   | 2 | 2GiB | adminweb | P@ssword123 | 2GiB"
-    "db-server    | 4 | 4GiB | dbauser  | SQLMaster!  | 5GiB"
-    "test-machine | 1 | 1GiB | tester   | testpass    | 0"
+    "web-server   | 1 | 1GiB | adminweb | P@ssword123"
+    "db-server    | 1 | 1GiB | dbauser  | SQLMaster!"
+    "test-machine | 1 | 1GiB | tester   | testpass"
 )
 
 STORAGE_POOL="remote"
@@ -21,7 +21,6 @@ create_vm() {
     local MEM=$(echo $1 | cut -d'|' -f3 | xargs)
     local USER=$(echo $1 | cut -d'|' -f4 | xargs)
     local PASS=$(echo $1 | cut -d'|' -f5 | xargs)
-    local EXTRA_DISK=$(echo $1 | cut -d'|' -f6 | xargs)
 
     echo "--------------------------------------------------------"
     echo "Déploiement de la VM : $NAME"
@@ -48,14 +47,6 @@ EOF
         --config limits.memory="$MEM" \
         --config user.user-data="$(cat cloud-config.yaml)" \
         --device root,size="$DISK_ROOT"
-
-    # 3. Ajout d'un disque supplémentaire si demandé
-    if [ "$EXTRA_DISK" != "0" ]; then
-        echo "Ajout d'un disque supplémentaire de $EXTRA_DISK..."
-        lxc storage volume create "$STORAGE_POOL" "vol-$NAME" --type=block size="$EXTRA_DISK"
-        # Correction ici : on utilise 'device add' pour une VM
-        lxc config device add "$NAME" extra-disk disk pool="$STORAGE_POOL" source="vol-$NAME"
-    fi
 
     rm cloud-config.yaml
     echo "VM $NAME lancée avec succès."

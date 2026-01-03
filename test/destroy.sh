@@ -2,7 +2,7 @@
 # Supprime toute l'infrastructure créée par le script de déploiement
 
 NODE_COUNT=3
-HOST_STORAGE_POOL="disks"
+HOST_STORAGE_POOL="default"
 
 echo "--- Suppression des instances ---"
 for i in $(seq 1 $NODE_COUNT); do
