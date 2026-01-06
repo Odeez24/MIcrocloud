@@ -4,23 +4,23 @@
 # CONFIGURATION
 # ==============================================================================
 VM_LIST=(
-    "web-server   | 1 | 1GiB | adminweb | Password123 | 1GiB"
-    "db-server    | 1 | 1GiB | dbauser  | SQLMaster!  | 2GiB"
-    "test-machine | 1 | 512MiB | tester   | testpass    | 0"
+# nom_machine| nb_CPU | taille RAM | user | mdp | disque supplémentaire (0 = non)
+    "machine |   1    |    1GiB    | admin | admin | 0"
 )
 
 STORAGE_POOL="remote"
 NETWORK="default" 
 DISK_ROOT="10GiB"
+IMAGE=ubuntu:24.04
 
 # Augmenter la patience du cluster
 lxc config set cluster.offline_threshold 60
 
 echo "--- Préparation globale ---"
 # 1. On télécharge l'image VM UNE SEULE FOIS avant la boucle
-if ! lxc image alias list | grep -q "ubuntu-ready"; then
+if ! lxc image alias list | grep -q "image-ready"; then
     echo "Récupération de l'image VM Ubuntu 24.04 (Opération lourde)..."
-    lxc image copy ubuntu:24.04 local: --alias ubuntu-ready --vm --quiet || { echo "Erreur critique : échec du téléchargement de l'image"; exit 1; }
+    lxc image copy $IMAGE local: --alias image-ready --vm --quiet || { echo "Erreur critique : échec du téléchargement de l'image"; exit 1; }
 fi
 
 create_vm() {
@@ -36,7 +36,7 @@ create_vm() {
     echo "--------------------------------------------------------"
 
     # 2. INITIALISATION
-    if ! lxc init ubuntu-ready "$NAME" --vm --storage "$STORAGE_POOL" --device root,size="$DISK_ROOT"; then
+    if ! lxc init image-ready "$NAME" --vm --storage "$STORAGE_POOL" --device root,size="$DISK_ROOT"; then
         echo "ERREUR : Impossible d'initialiser $NAME."
         return
     fi

@@ -139,4 +139,6 @@ lxc exec micro3 -- bash -c "cat /root/preseed.yaml | microcloud preseed" &
 
 wait
 
+lxc file push ./custom_vm.sh micro1/root/
+
 echo "Cluster MicroCloud initialisé !"
