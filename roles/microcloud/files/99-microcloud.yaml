@@ -1,7 +1,0 @@
-network:
-  version: 2
-  ethernets:
-    eth1:
-      accept-ra: false
-      dhcp4: false
-      link-local: []
