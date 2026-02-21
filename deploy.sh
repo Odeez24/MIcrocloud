@@ -5,9 +5,10 @@ set -e
 # ==============================================================================
 NODE_COUNT=3
 VM_CPU=2
-VM_MEM="4GiB"
+VM_MEM="3GiB"
 LXD_CHANNEL="5.21/stable"
-PASSPHRASE="mon-secret-tres-sur-123"
+PASSPHRASE="mon-secret-123"
+
 
 HOST_STORAGE_POOL="disks"
 DISK_REMOTE_SIZE="25GiB"
@@ -17,6 +18,7 @@ OVN_IPV4_RANGE="10.0.10.100-10.0.10.254"
 OVN_IPV6_GW="fd42:6a3c:bac1:a22e::1/64"
 OVN_DNS_IPV4="10.0.10.1"
 OVN_DNS_IPV6="fd42:6a3c:bac1:a22e::1"
+
 
 # ==============================================================================
 # 1. PRÉPARATION HÔTE & VMS
@@ -33,8 +35,9 @@ lxc network set lxdbr0 ipv6.dhcp.stateful true
 sudo systemctl restart snap.lxd.daemon
 
 lxc storage create $HOST_STORAGE_POOL zfs size=100GiB || true
+
 lxc network create microbr0 ipv4.address=$OVN_IPV4_GW ipv6.address=$OVN_IPV6_GW || true
-lxc network set microbr0 ipv4.firewall false  # CORRECTIF : Désactive le pare-feu LXD sur le bridge
+lxc network set microbr0 ipv4.firewall false
 lxc network set microbr0 ipv6.firewall false
 sudo ip link set microbr0 promisc on 
 
@@ -140,5 +143,33 @@ lxc exec micro3 -- bash -c "cat /root/preseed.yaml | microcloud preseed" &
 wait
 
 lxc file push ./custom_vm.sh micro1/root/
+
+echo "--- Activation de l'interface Web sur micro1 ---"
+lxc exec micro1 -- snap set lxd ui.enable=true
+lxc exec micro1 -- lxc config set core.https_address 0.0.0.0:8443
+lxc exec micro1 -- lxc config set core.trust_password $PASSPHRASE
+lxc exec micro1 -- systemctl reload snap.lxd.daemon
+
+# Activer le forwarding immédiatement
+sudo sysctl -w net.ipv4.ip_forward=1
+
+# Désactiver le pare-feu sur le bridge de l'hôte pour tester
+sudo iptables -A FORWARD -i microbr0 -j ACCEPT
+sudo iptables -A FORWARD -o microbr0 -j ACCEPT
+
+lxc exec micro1 -- ./custom_vm.sh
+
+echo "Attente de la stabilisation du réseau OVN..."
+
+DEFAULT_GW_RAW=$(lxc exec micro1 -- lxc network get default ipv4.address)
+DEFAULT_GW=$(echo $DEFAULT_GW_RAW | sed 's/\.[0-9]\+\//.0\//')
+echo "--- DEFAULT GW : $DEFAULT_GW ---"
+
+CLUSTER_GW_IP=$(lxc exec micro1 -- lxc network get default volatile.network.ipv4.address)
+
+sudo ip route add $DEFAULT_GW via $CLUSTER_GW_IP
+lxc exec micro1 -- lxc network set default ipv4.nat true
+
+echo "Interface Web disponible sur : https://10.1.123.10:8443"
 
 echo "Cluster MicroCloud initialisé !"

@@ -5,13 +5,14 @@
 # ==============================================================================
 VM_LIST=(
 # nom_machine| nb_CPU | taille RAM | user | mdp | disque supplémentaire (0 = non)
-    "machine |   1    |    1GiB    | admin | admin | 0"
+    "machine |   1    |    500MiB    | admin | admin | 0"
 )
 
 STORAGE_POOL="remote"
 NETWORK="default" 
 DISK_ROOT="10GiB"
 IMAGE=ubuntu:24.04
+
 
 # Augmenter la patience du cluster
 lxc config set cluster.offline_threshold 60
@@ -56,6 +57,11 @@ users:
     lock_passwd: false
     passwd: $(openssl passwd -6 "$PASS")
 ssh_pwauth: true
+network:
+  version: 2
+  ethernets:
+    enp5s0: # eth0 (OVN)
+      dhcp4: true
 EOF
     lxc config set "$NAME" user.user-data - < cloud-config.yaml
     rm cloud-config.yaml

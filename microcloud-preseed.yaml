@@ -1,5 +1,5 @@
 initiator_address: 10.1.123.10
-session_passphrase: mon-secret-tres-sur-123
+session_passphrase: mon-secret-123
 systems:
 - name: micro1
   address: 10.1.123.10
