@@ -143,6 +143,7 @@ lxc exec micro3 -- bash -c "cat /root/preseed.yaml | microcloud preseed" &
 wait
 
 lxc file push ./custom_vm.sh micro1/root/
+lxc file push ./vms.yaml micro1/root/
 
 echo "--- Activation de l'interface Web sur micro1 ---"
 lxc exec micro1 -- snap set lxd ui.enable=true

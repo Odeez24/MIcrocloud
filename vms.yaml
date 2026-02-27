@@ -1,0 +1,8 @@
+vms:
+  - name: machine
+    image: "ubuntu:24.04"
+    cpu: 1
+    memory: 500MiB
+    user: admin
+    password: admin
+    extra_disk: "0"
