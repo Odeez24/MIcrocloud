@@ -157,13 +157,14 @@ sudo sysctl -w net.ipv4.ip_forward=1
 sudo iptables -A FORWARD -i microbr0 -j ACCEPT
 sudo iptables -A FORWARD -o microbr0 -j ACCEPT
 
+echo "--- Exécution du script de configuration interne ---"
+
 lxc exec micro1 -- ./custom_vm.sh
 
 echo "Attente de la stabilisation du réseau OVN..."
 
 DEFAULT_GW_RAW=$(lxc exec micro1 -- lxc network get default ipv4.address)
 DEFAULT_GW=$(echo $DEFAULT_GW_RAW | sed 's/\.[0-9]\+\//.0\//')
-echo "--- DEFAULT GW : $DEFAULT_GW ---"
 
 CLUSTER_GW_IP=$(lxc exec micro1 -- lxc network get default volatile.network.ipv4.address)
 
